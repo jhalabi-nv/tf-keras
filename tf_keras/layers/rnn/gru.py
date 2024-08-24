@@ -633,6 +633,13 @@ class GRU(DropoutRNNCellMixin, RNN, base_layer.BaseRandomLayer):
         is_ragged_input = row_lengths is not None
         self._validate_args_if_ragged(is_ragged_input, mask)
 
+        # cuDNN v9 API requires row_lengths as an input.
+        # If the input is dense but row_lengths is None, generate a default row_lengths
+        if not is_ragged_input:
+            row_lengths = tf.constant(
+                [inputs.shape[1] for i in range(inputs.shape[0])], dtype="int32"
+            )
+
         # GRU does not support constants. Ignore it during process.
         inputs, initial_state, _ = self._process_inputs(
             inputs, initial_state, None
